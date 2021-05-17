@@ -10,7 +10,7 @@ import (
 
 // Token is an interface that defines a token
 type Token interface {
-	renew(cancel context.CancelFunc) error
+	renew(ctx context.Context) error
 	ToString() string
 }
 
@@ -35,16 +35,18 @@ func NewAccessToken(corpID, corpSecret string) Token {
 		id:     corpID,
 		secret: corpSecret,
 	}
-	err := t.renew(func() {})
+	err := t.renew(context.TODO())
 	if err != nil {
 		log.Println(err.Error())
 	}
 	return t
 }
 
-func (t *accessToken) renew(cancel context.CancelFunc) error {
+func (t *accessToken) renew(ctx context.Context) error {
+	childCtx, cancel := context.WithTimeout(ctx, time.Duration(2)*time.Second)
 	defer cancel()
-	res, err := httpGETRequest(fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=%s&corpsecret=%s", t.auth.id, t.auth.secret))
+
+	res, err := httpGETRequest(childCtx, fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=%s&corpsecret=%s", t.auth.id, t.auth.secret))
 	if err != nil {
 		return err
 	}
@@ -67,7 +69,7 @@ func (t *accessToken) ToString() string {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(t.maxConnectionSecond)*time.Second)
 		defer cancel()
 
-		go t.renew(cancel)
+		go t.renew(ctx)
 		<-ctx.Done()
 		return t.content
 	}

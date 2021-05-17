@@ -7,12 +7,17 @@ import (
 )
 
 func TestWeComRus(t *testing.T) {
-	hook, err := NewWeComHook(Option{
-		CorpID:     "",
-		CorpSecret: "",
-		ChatID:     "",
-		AppName:    "Test APP",
-	})
+	hook, err := NewWeComHook(
+		Option{
+			CorpID:      "",
+			CorpSecret:  "",
+			GroupChatID: "",
+			AppName:     "Test APP",
+		},
+		Option{
+			Safe: SafeOn,
+		},
+	)
 	if err != nil {
 		t.Log(err.Error())
 	}

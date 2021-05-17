@@ -1,7 +1,8 @@
 package tokens
 
 import (
-	"io/ioutil"
+	"context"
+	"io"
 	"net/http"
 )
 
@@ -12,25 +13,24 @@ type accessTokenResponse struct {
 	ExpiresIn   int64  `json:"expires_in"`
 }
 
-func httpGETRequest(urlStr string) (res []byte, err error) {
-	request, err := http.NewRequest(
+func httpGETRequest(ctx context.Context, urlStr string) (res []byte, err error) {
+	request, err := http.NewRequestWithContext(
+		ctx,
 		"GET",
 		urlStr,
 		nil,
 	)
 	if err != nil {
-
 		return
 	}
 
 	c := new(http.Client)
-
 	resp, err := c.Do(request)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
 
-	res, err = ioutil.ReadAll(resp.Body)
+	res, err = io.ReadAll(resp.Body)
 	return
 }

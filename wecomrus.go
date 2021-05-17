@@ -2,11 +2,13 @@ package wecomrus
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/henry0475/wecomrus/tokens"
 	"github.com/sirupsen/logrus"
@@ -29,7 +31,7 @@ func NewWeComHook(opts ...Option) (*WeComHook, error) {
 }
 
 func getMessage(entry *logrus.Entry) string {
-	message := options.MessageFormart
+	message := options.MessageFormat.ToString()
 	message = strings.ReplaceAll(message, "{{app}}", options.AppName)
 	message = strings.ReplaceAll(message, "{{time}}", entry.Time.In(options.TimeZone).Format(options.TimeFormat))
 	message = strings.ReplaceAll(message, "{{level}}", entry.Level.String())
@@ -41,6 +43,9 @@ func getMessage(entry *logrus.Entry) string {
 
 // Fire is called when a log event is fired.
 func (hook *WeComHook) Fire(entry *logrus.Entry) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(2)*time.Second)
+	defer cancel()
+
 	var request struct {
 		ChatID  string `json:"chatid"`
 		MsgType string `json:"msgtype"`
@@ -49,16 +54,16 @@ func (hook *WeComHook) Fire(entry *logrus.Entry) error {
 		} `json:"text"`
 		IsSafe int `json:"safe"`
 	}
-	request.ChatID = options.ChatID
-	request.MsgType = "text"
+	request.ChatID = options.GroupChatID
+	request.MsgType = string(options.MsgType)
 	request.Text.Content = getMessage(entry)
-	request.IsSafe = 0
+	request.IsSafe = options.Safe.ToInt()
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", "https://qyapi.weixin.qq.com/cgi-bin/appchat/send?access_token="+hook.t.ToString(), bytes.NewReader(requestJSON))
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://qyapi.weixin.qq.com/cgi-bin/appchat/send?access_token="+hook.t.ToString(), bytes.NewReader(requestJSON))
 	if err != nil {
 		return err
 	}
@@ -69,7 +74,7 @@ func (hook *WeComHook) Fire(entry *logrus.Entry) error {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
