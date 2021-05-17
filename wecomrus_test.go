@@ -15,7 +15,7 @@ func TestWeComRus(t *testing.T) {
 			AppName:     "Test APP",
 		},
 		Option{
-			Safe: SafeOn,
+			Safe: SafeOff,
 		},
 	)
 	if err != nil {

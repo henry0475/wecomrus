@@ -99,7 +99,7 @@ func mergeOptions(opts ...Option) {
 		if opt.Safe == SafeOn {
 			options.Safe = SafeOn
 		}
-		if opt.MsgType != TextMessage {
+		if opt.MsgType != "" {
 			options.MsgType = opt.MsgType
 		}
 	}
