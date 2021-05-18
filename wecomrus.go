@@ -10,7 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/henry0475/wecomrus/options"
+	"github.com/henry0475/wecomrus/storage"
 	"github.com/henry0475/wecomrus/tokens"
+	"github.com/henry0475/wecomrus/utils/hash"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,20 +23,19 @@ type WeComHook struct {
 	c http.Client
 }
 
-func NewWeComHook(opts ...Option) (*WeComHook, error) {
-	mergeOptions(opts...)
-	checkOptions()
+func NewWeComHook(opts ...*options.Option) (*WeComHook, error) {
+	options.MergeOptions(opts...)
 
 	return &WeComHook{
-		t: tokens.NewAccessToken(options.CorpID, options.CorpSecret),
+		t: tokens.NewAccessToken(options.GetOptions().CorpID, options.GetOptions().CorpSecret),
 		c: http.Client{},
 	}, nil
 }
 
 func getMessage(entry *logrus.Entry) string {
-	message := options.MessageFormat.ToString()
-	message = strings.ReplaceAll(message, "{{app}}", options.AppName)
-	message = strings.ReplaceAll(message, "{{time}}", entry.Time.In(options.TimeZone).Format(options.TimeFormat))
+	message := options.GetOptions().MessageFormat.ToString()
+	message = strings.ReplaceAll(message, "{{app}}", options.GetOptions().AppName)
+	message = strings.ReplaceAll(message, "{{time}}", entry.Time.In(options.GetOptions().TimeZone).Format(options.GetOptions().TimeFormat))
 	message = strings.ReplaceAll(message, "{{level}}", entry.Level.String())
 	message = strings.ReplaceAll(message, "{{message}}", entry.Message)
 	fields, _ := json.MarshalIndent(entry.Data, "", "\t")
@@ -41,9 +43,11 @@ func getMessage(entry *logrus.Entry) string {
 	return message
 }
 
-// Fire is called when a log event is fired.
-func (hook *WeComHook) Fire(entry *logrus.Entry) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(2)*time.Second)
+func (hook *WeComHook) sendToGroupChat(ctx context.Context, message string) error {
+	if options.GetOptions().GroupChatID == "" {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(2)*time.Second)
 	defer cancel()
 
 	var request struct {
@@ -54,10 +58,10 @@ func (hook *WeComHook) Fire(entry *logrus.Entry) error {
 		} `json:"text"`
 		IsSafe int `json:"safe"`
 	}
-	request.ChatID = options.GroupChatID
-	request.MsgType = string(options.MsgType)
-	request.Text.Content = getMessage(entry)
-	request.IsSafe = options.Safe.ToInt()
+	request.ChatID = options.GetOptions().GroupChatID
+	request.MsgType = string(options.GetOptions().MsgType)
+	request.Text.Content = message
+	request.IsSafe = options.GetOptions().Safe.ToInt()
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
 		return err
@@ -88,6 +92,83 @@ func (hook *WeComHook) Fire(entry *logrus.Entry) error {
 	}
 
 	return fmt.Errorf("error code %d with message: %s", response.Errcode, response.Errmsg)
+}
+
+func (hook *WeComHook) sendByWebhooks(ctx context.Context, message string) error {
+
+	// TODO: xxx
+	var _ = func(ctx context.Context, message string) {
+
+	}
+
+	for _, webhook := range options.GetOptions().Webhooks {
+
+		var request struct {
+			MsgType string `json:"msgtype"`
+			Text    struct {
+				Content             string   `json:"content"`
+				MentionedList       []string `json:"mentioned_list"`
+				MentionedMobileList []string `json:"mentioned_mobile_list"`
+			} `json:"text"`
+		}
+		request.MsgType = string(options.GetOptions().MsgType)
+		request.Text.Content = message
+		requestJSON, err := json.Marshal(request)
+		if err != nil {
+			return err
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", webhook, bytes.NewReader(requestJSON))
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Content-Type", "application/json;charset=UTF-8")
+		resp, err := hook.c.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		var response struct {
+			Errcode int64  `json:"errcode"`
+			Errmsg  string `json:"errmsg"`
+		}
+		json.Unmarshal(body, &response)
+		if response.Errcode == 0 && response.Errmsg == "ok" {
+			return nil
+		}
+
+		return fmt.Errorf("error code %d with message: %s", response.Errcode, response.Errmsg)
+	}
+
+	return nil
+}
+
+// Fire is called when a log event is fired.
+func (hook *WeComHook) Fire(entry *logrus.Entry) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(3)*time.Second)
+	defer cancel()
+
+	go func() {
+		if options.GetOptions().GroupChatID == "" {
+			return
+		}
+		if err := hook.sendToGroupChat(ctx, getMessage(entry)); err != nil {
+			if options.GetOptions().EnableStats == options.Bool(true) {
+				storage.Counter.LogFailedToSend(hash.GetDestID(options.GetOptions().GroupChatID))
+			}
+		} else {
+			if options.GetOptions().EnableStats == options.Bool(true) {
+				storage.Counter.LogSentTo(hash.GetDestID(options.GetOptions().GroupChatID))
+			}
+		}
+	}()
+
+	return nil
 }
 
 // Levels returns the available logging levels.

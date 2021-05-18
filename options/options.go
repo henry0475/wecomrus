@@ -1,9 +1,14 @@
-package wecomrus
+package options
 
 import (
 	"log"
 	"time"
 )
+
+// Bool returns a pointer to the string value passed in.
+func Bool(b bool) *bool {
+	return &b
+}
 
 // SafeSwitcher defines a switcher for switching safe flag
 type SafeSwitcher bool
@@ -30,6 +35,8 @@ type MessageType string
 const (
 	// TextMessage for sending text message
 	TextMessage MessageType = "text"
+	// MarkdownMessage for sending markdown message
+	// MarkdownMessage MessageType = "markdown"
 )
 
 type MessageFormater interface {
@@ -44,7 +51,7 @@ func (n normalTextFormat) ToString() string {
 	return n.text
 }
 
-// Option defines ...
+// option defines ...
 type Option struct {
 	// AppName will be used for logging out
 	AppName string
@@ -53,6 +60,10 @@ type Option struct {
 	MessageFormat MessageFormater
 	// GroupChatID defines ...
 	GroupChatID string
+	// Webhooks defines ...
+	Webhooks []string
+	// EnableStats determine whether statistics has enabled
+	EnableStats *bool
 	// TimeFormat defines ...
 	TimeFormat string
 	// TimeZone defines ...
@@ -70,11 +81,15 @@ type Option struct {
 
 var options Option
 
-func mergeOptions(opts ...Option) {
+func MergeOptions(opts ...*Option) {
 	// Set defaults
 	options.MsgType = TextMessage
+	options.EnableStats = Bool(true)
 
 	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
 		if opt.AppName != "" {
 			options.AppName = opt.AppName
 		}
@@ -83,6 +98,12 @@ func mergeOptions(opts ...Option) {
 		}
 		if opt.GroupChatID != "" {
 			options.GroupChatID = opt.GroupChatID
+		}
+		if len(opt.Webhooks) != 0 {
+			options.Webhooks = opt.Webhooks
+		}
+		if opt.EnableStats != nil {
+			options.EnableStats = opt.EnableStats
 		}
 		if opt.CorpSecret != "" {
 			options.CorpSecret = opt.CorpSecret
@@ -103,6 +124,8 @@ func mergeOptions(opts ...Option) {
 			options.MsgType = opt.MsgType
 		}
 	}
+
+	checkOptions()
 }
 
 func checkOptions() {
@@ -138,7 +161,12 @@ func checkOptions() {
 	if options.CorpSecret == "" {
 		log.Println("Warning: You have not defined the CorpSecret")
 	}
-	if options.GroupChatID == "" {
-		log.Println("Warning: You have not provided any group chat IDs in the GroupChatIDs")
+	if options.GroupChatID == "" && len(options.Webhooks) == 0 {
+		log.Println("Warning: You have not provided any group chat IDs or webhooks")
 	}
+}
+
+// GetOptions return ...
+func GetOptions() Option {
+	return options
 }

@@ -1,4 +1,4 @@
-package wecomrus
+package options
 
 import (
 	"testing"
@@ -15,7 +15,7 @@ func (m markdownMessage) ToString() string {
 
 func Test_mergeOptions(t *testing.T) {
 	type args struct {
-		opts []Option
+		opts []*Option
 	}
 	loc, _ := time.LoadLocation("America/New_York")
 	var md markdownMessage
@@ -29,7 +29,7 @@ func Test_mergeOptions(t *testing.T) {
 		// TODO: Add test cases.
 		{
 			name: "Test1", args: args{
-				opts: []Option{
+				opts: []*Option{
 					{
 						AppName:     "app1",
 						GroupChatID: "c",
@@ -51,6 +51,9 @@ func Test_mergeOptions(t *testing.T) {
 					{
 						MsgType: TextMessage,
 					},
+					{
+						EnableStats: Bool(true),
+					},
 				},
 			}, want: Option{
 				AppName:       "app1",
@@ -62,12 +65,13 @@ func Test_mergeOptions(t *testing.T) {
 				MessageFormat: md,
 				Safe:          SafeOn,
 				MsgType:       TextMessage,
+				EnableStats:   Bool(true),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mergeOptions(tt.args.opts...)
+			MergeOptions(tt.args.opts...)
 			if options.AppName != tt.want.AppName {
 				t.Errorf("AppName is not assigned, got: %v; want: %v", options.AppName, tt.want.AppName)
 			}
