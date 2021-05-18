@@ -72,6 +72,8 @@ type Option struct {
 	Safe SafeSwitcher
 	// MsgType defines what type of log you want to display in WeCom
 	MsgType MessageType
+	// DropIfFull defines ...
+	DropIfFull *bool
 
 	// CorpID defines ...
 	CorpID string
