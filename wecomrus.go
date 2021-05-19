@@ -1,11 +1,10 @@
 package wecomrus
 
 import (
-	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/henry0475/wecomrus/options"
 	"github.com/sirupsen/logrus"
@@ -21,7 +20,9 @@ func NewWeComHook(opts ...*options.Option) (*WeComHook, error) {
 	client := &http.Client{}
 	// Try to load
 	loadWebhooks(client)
-	loadGroupChat(client)
+	if options.GetOptions().CorpID != "" && options.GetOptions().CorpSecret != "" {
+		loadGroupChat(client)
+	}
 
 	wch := &WeComHook{}
 
@@ -48,12 +49,13 @@ func getMessage(entry *logrus.Entry) string {
 
 // Fire is called when a log event is fired.
 func (hook *WeComHook) Fire(entry *logrus.Entry) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(3)*time.Second)
-	defer cancel()
-
 	message := getMessage(entry)
 	for _, sender := range hook.senders {
-		go sender.Send(ctx, message)
+		go func(sender Sender) {
+			if err := sender.Send(message); err != nil {
+				log.Println(err)
+			}
+		}(sender)
 	}
 	return nil
 }

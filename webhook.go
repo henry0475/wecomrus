@@ -2,7 +2,6 @@ package wecomrus
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,13 +23,13 @@ type hook struct {
 type hooks []hook
 
 // Send defines ...
-func (h hooks) Send(ctx context.Context, message string) error {
+func (h hooks) Send(message string) error {
 	for _, hk := range h {
 		if hk.bucket.TakeAvailable(1) != 0 {
 			// Allowed to send
 			storage.Counter.AfterFired(
 				hash.GetDestID(hk.getEndPoint()),
-				hk.fire(ctx, message),
+				hk.fire(message),
 			)
 			break
 		}
@@ -54,7 +53,7 @@ func (h hook) getEndPoint() string {
 	return h.endpoint
 }
 
-func (h hook) fire(ctx context.Context, message string) error {
+func (h hook) fire(message string) error {
 	var request struct {
 		MsgType string `json:"msgtype"`
 		Text    struct {
@@ -70,7 +69,7 @@ func (h hook) fire(ctx context.Context, message string) error {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", h.getEndPoint(), bytes.NewReader(requestJSON))
+	req, err := http.NewRequest("POST", h.getEndPoint(), bytes.NewReader(requestJSON))
 	if err != nil {
 		return err
 	}
@@ -90,6 +89,7 @@ func (h hook) fire(ctx context.Context, message string) error {
 		Errmsg  string `json:"errmsg"`
 	}
 	json.Unmarshal(body, &response)
+
 	if response.Errcode == 0 && response.Errmsg == "ok" {
 		return nil
 	}

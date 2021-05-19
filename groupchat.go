@@ -2,19 +2,17 @@ package wecomrus
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/henry0475/wecomrus/options"
 	"github.com/henry0475/wecomrus/tokens"
 )
 
 type Sender interface {
-	Send(ctx context.Context, message string) error
+	Send(message string) error
 }
 
 type GroupChat struct {
@@ -31,12 +29,10 @@ func loadGroupChat(client *http.Client) {
 	groupChat.endpoint = "https://qyapi.weixin.qq.com/cgi-bin/appchat/send"
 }
 
-func (g *GroupChat) Send(ctx context.Context, message string) error {
+func (g *GroupChat) Send(message string) error {
 	if options.GetOptions().GroupChatID == "" {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(2)*time.Second)
-	defer cancel()
 
 	var request struct {
 		ChatID  string `json:"chatid"`
@@ -55,7 +51,7 @@ func (g *GroupChat) Send(ctx context.Context, message string) error {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", g.endpoint+"?access_token="+g.t.ToString(), bytes.NewReader(requestJSON))
+	req, err := http.NewRequest("POST", g.endpoint+"?access_token="+g.t.ToString(), bytes.NewReader(requestJSON))
 	if err != nil {
 		return err
 	}

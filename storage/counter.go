@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -26,16 +27,18 @@ func (c *CountCollection) logSentTo(destID string) {
 	if curr, ok := c.successMap[date][destID]; ok {
 		c.successMap[date][destID] = curr + 1
 	} else {
+		c.successMap[date] = make(requestCounter)
 		c.successMap[date][destID] = 1
 	}
 }
 
 // AfterFired
 func (c *CountCollection) AfterFired(destID string, err error) {
-	if options.GetOptions().EnableStats == options.Bool(true) {
+	if options.GetOptions().EnableStats == options.True {
 		if err == nil {
 			c.logSentTo(destID)
 		} else {
+			log.Println(err)
 			c.logFailedToSend(destID)
 		}
 	}
@@ -50,6 +53,7 @@ func (c *CountCollection) logFailedToSend(destID string) {
 	if curr, ok := c.failMap[date][destID]; ok {
 		c.failMap[date][destID] = curr + 1
 	} else {
+		c.failMap[date] = make(requestCounter)
 		c.failMap[date][destID] = 1
 	}
 }

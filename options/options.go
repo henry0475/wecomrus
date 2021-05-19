@@ -10,6 +10,9 @@ func Bool(b bool) *bool {
 	return &b
 }
 
+var True = Bool(true)
+var False = Bool(false)
+
 // SafeSwitcher defines a switcher for switching safe flag
 type SafeSwitcher bool
 
@@ -86,7 +89,7 @@ var options Option
 func MergeOptions(opts ...*Option) {
 	// Set defaults
 	options.MsgType = TextMessage
-	options.EnableStats = Bool(true)
+	options.EnableStats = True
 
 	for _, opt := range opts {
 		if opt == nil {
@@ -157,12 +160,12 @@ func checkOptions() {
 {{content}}`
 		options.MessageFormat = normalMessage
 	}
-	if options.CorpID == "" {
-		log.Println("Warning: You have not defined the CorpID")
-	}
-	if options.CorpSecret == "" {
-		log.Println("Warning: You have not defined the CorpSecret")
-	}
+	// if options.CorpID == "" {
+	// 	log.Println("Warning: You have not defined the CorpID")
+	// }
+	// if options.CorpSecret == "" {
+	// 	log.Println("Warning: You have not defined the CorpSecret")
+	// }
 	if options.GroupChatID == "" && len(options.Webhooks) == 0 {
 		log.Println("Warning: You have not provided any group chat IDs or webhooks")
 	}
