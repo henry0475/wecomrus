@@ -18,7 +18,7 @@ type CountCollection struct {
 var Counter CountCollection
 
 // LogSentTo will ...
-func (c *CountCollection) LogSentTo(destID string) {
+func (c *CountCollection) logSentTo(destID string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -30,8 +30,19 @@ func (c *CountCollection) LogSentTo(destID string) {
 	}
 }
 
+// AfterFired
+func (c *CountCollection) AfterFired(destID string, err error) {
+	if options.GetOptions().EnableStats == options.Bool(true) {
+		if err == nil {
+			c.logSentTo(destID)
+		} else {
+			c.logFailedToSend(destID)
+		}
+	}
+}
+
 // LogFailedToSend will ...
-func (c *CountCollection) LogFailedToSend(destID string) {
+func (c *CountCollection) logFailedToSend(destID string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

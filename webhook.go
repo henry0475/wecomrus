@@ -2,6 +2,7 @@ package wecomrus
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,12 +10,10 @@ import (
 	"time"
 
 	"github.com/henry0475/wecomrus/options"
+	"github.com/henry0475/wecomrus/storage"
+	"github.com/henry0475/wecomrus/utils/hash"
 	"github.com/juju/ratelimit"
 )
-
-type hooker interface {
-	getEngPoint() string
-}
 
 type hook struct {
 	bucket   *ratelimit.Bucket
@@ -24,27 +23,38 @@ type hook struct {
 
 type hooks []hook
 
-func (h hooks) send() {
+// Send defines ...
+func (h hooks) Send(ctx context.Context, message string) error {
 	for _, hk := range h {
-		hk.bucket.TakeAvailable(1)
+		if hk.bucket.TakeAvailable(1) != 0 {
+			// Allowed to send
+			storage.Counter.AfterFired(
+				hash.GetDestID(hk.getEndPoint()),
+				hk.fire(ctx, message),
+			)
+			break
+		}
 	}
+	return nil
 }
 
 var webhooks hooks
 
-func newWebhook(client *http.Client, endpoint string) {
-	webhooks = append(webhooks, hook{
-		bucket:   ratelimit.NewBucketWithQuantum(time.Minute, 20, 20),
-		endpoint: endpoint,
-		c:        client,
-	})
+func loadWebhooks(client *http.Client) {
+	for _, wh := range options.GetOptions().Webhooks {
+		webhooks = append(webhooks, hook{
+			bucket:   ratelimit.NewBucketWithQuantum(time.Minute, 20, 20),
+			endpoint: wh,
+			c:        client,
+		})
+	}
 }
 
-func (hook webHook) getEngPoint() string {
-	return hook.endpoint
+func (h hook) getEndPoint() string {
+	return h.endpoint
 }
 
-func (hook webHook) fire(message string) error {
+func (h hook) fire(ctx context.Context, message string) error {
 	var request struct {
 		MsgType string `json:"msgtype"`
 		Text    struct {
@@ -60,12 +70,12 @@ func (hook webHook) fire(message string) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", hook.getEngPoint(), bytes.NewReader(requestJSON))
+	req, err := http.NewRequestWithContext(ctx, "POST", h.getEndPoint(), bytes.NewReader(requestJSON))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json;charset=UTF-8")
-	resp, err := hook.c.Do(req)
+	resp, err := h.c.Do(req)
 	if err != nil {
 		return err
 	}
