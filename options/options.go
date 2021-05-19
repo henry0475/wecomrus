@@ -90,6 +90,7 @@ func MergeOptions(opts ...*Option) {
 	// Set defaults
 	options.MsgType = TextMessage
 	options.EnableStats = True
+	options.DropIfFull = True
 
 	for _, opt := range opts {
 		if opt == nil {

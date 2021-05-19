@@ -25,14 +25,17 @@ type hooks []hook
 // Send defines ...
 func (h hooks) Send(message string) error {
 	for _, hk := range h {
-		if hk.bucket.TakeAvailable(1) != 0 {
-			// Allowed to send
-			storage.Counter.AfterFired(
-				hash.GetDestID(hk.getEndPoint()),
-				hk.fire(message),
-			)
-			break
+		if options.GetOptions().DropIfFull == options.True {
+			if hk.bucket.TakeAvailable(1) != 0 {
+				// Allowed to send
+				storage.Counter.AfterFired(
+					hash.GetDestID(hk.getEndPoint()),
+					hk.fire(message),
+				)
+				break
+			}
 		}
+		// TODO: waiting
 	}
 	return nil
 }

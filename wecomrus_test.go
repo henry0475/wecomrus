@@ -19,7 +19,7 @@ func TestWeComRus(t *testing.T) {
 			AppName:     "Test APP",
 		},
 		&options.Option{
-			Webhooks: []string{"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=fe751bb1-e0b8-45cf-8d2d-20156a25b70f"},
+			Webhooks: []string{""},
 		},
 		&options.Option{
 			Safe: options.SafeOff,
@@ -38,10 +38,15 @@ func TestWeComRus(t *testing.T) {
 		"t1": "a1",
 	}).Warn("asass")
 
-	log.Error("1234567")
-	time.Sleep(time.Second * time.Duration(2))
+	for i := 0; i < 30; i++ {
+		log.WithFields(logrus.Fields{
+			"for": "test limit",
+		}).Error(i)
+	}
 
-	log.Println(storage.Counter.GetStat(hash.GetDestID("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=fe751bb1-e0b8-45cf-8d2d-20156a25b70f")))
+	time.Sleep(time.Second * time.Duration(30))
+
+	log.Println(storage.Counter.GetStat(hash.GetDestID("")))
 
 	t.Error("Done")
 }
