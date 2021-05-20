@@ -18,7 +18,6 @@ type CountCollection struct {
 
 var Counter CountCollection
 
-// LogSentTo will ...
 func (c *CountCollection) logSentTo(destID string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -32,19 +31,6 @@ func (c *CountCollection) logSentTo(destID string) {
 	}
 }
 
-// AfterFired
-func (c *CountCollection) AfterFired(destID string, err error) {
-	if options.GetOptions().EnableStats == options.True {
-		if err == nil {
-			c.logSentTo(destID)
-		} else {
-			log.Println(err)
-			c.logFailedToSend(destID)
-		}
-	}
-}
-
-// LogFailedToSend will ...
 func (c *CountCollection) logFailedToSend(destID string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -55,6 +41,18 @@ func (c *CountCollection) logFailedToSend(destID string) {
 	} else {
 		c.failMap[date] = make(requestCounter)
 		c.failMap[date][destID] = 1
+	}
+}
+
+// AfterFired should be used as long as a message has been delivered
+func (c *CountCollection) AfterFired(destID string, err error) {
+	if options.GetOptions().EnableStats == options.True {
+		if err == nil {
+			c.logSentTo(destID)
+		} else {
+			log.Println(err)
+			c.logFailedToSend(destID)
+		}
 	}
 }
 

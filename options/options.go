@@ -141,7 +141,7 @@ func checkOptions() {
 	if options.TimeZone == nil {
 		tz, err := time.LoadLocation("Asia/Chongqing")
 		if err != nil {
-			panic(err)
+			log.Printf("Warning: we don't find the NZ data, msg: %v\n", err)
 		}
 		options.TimeZone = tz
 	}
@@ -161,12 +161,6 @@ func checkOptions() {
 {{content}}`
 		options.MessageFormat = normalMessage
 	}
-	// if options.CorpID == "" {
-	// 	log.Println("Warning: You have not defined the CorpID")
-	// }
-	// if options.CorpSecret == "" {
-	// 	log.Println("Warning: You have not defined the CorpSecret")
-	// }
 	if options.GroupChatID == "" && len(options.Webhooks) == 0 {
 		log.Println("Warning: You have not provided any group chat IDs or webhooks")
 	}

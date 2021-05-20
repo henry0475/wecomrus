@@ -14,48 +14,22 @@ import (
 	"github.com/juju/ratelimit"
 )
 
+// Sender is an interface that can be used when messages delivery
+type Sender interface {
+	Send(message string) error
+}
+
 type hook struct {
 	bucket   *ratelimit.Bucket
 	endpoint string
 	c        *http.Client
 }
 
-type hooks []hook
-
-// Send defines ...
-func (h hooks) Send(message string) error {
-	for _, hk := range h {
-		if options.GetOptions().DropIfFull == options.True {
-			if hk.bucket.TakeAvailable(1) != 0 {
-				// Allowed to send
-				storage.Counter.AfterFired(
-					hash.GetDestID(hk.getEndPoint()),
-					hk.fire(message),
-				)
-				break
-			}
-		}
-		// TODO: waiting
-	}
-	return nil
-}
-
-var webhooks hooks
-
-func loadWebhooks(client *http.Client) {
-	for _, wh := range options.GetOptions().Webhooks {
-		webhooks = append(webhooks, hook{
-			bucket:   ratelimit.NewBucketWithQuantum(time.Minute, 20, 20),
-			endpoint: wh,
-			c:        client,
-		})
-	}
-}
-
 func (h hook) getEndPoint() string {
 	return h.endpoint
 }
 
+// fire each hook can fire, but webhooks can contain multiple links
 func (h hook) fire(message string) error {
 	var request struct {
 		MsgType string `json:"msgtype"`
@@ -98,4 +72,39 @@ func (h hook) fire(message string) error {
 	}
 
 	return fmt.Errorf("error code %d with message: %s", response.Errcode, response.Errmsg)
+}
+
+type hooks []hook
+
+// Send defines ...
+func (h hooks) Send(message string) error {
+	if options.GetOptions().DropIfFull == options.True {
+		for _, hk := range h {
+			if hk.bucket.TakeAvailable(1) != 0 {
+				// Allowed to send
+				storage.Counter.AfterFired(
+					hash.GetDestID(hk.getEndPoint()),
+					hk.fire(message),
+				)
+				break
+			}
+		}
+	} else {
+		// TODO: waiting
+
+	}
+
+	return nil
+}
+
+var webhooks hooks
+
+func loadWebhooks(client *http.Client) {
+	for _, wh := range options.GetOptions().Webhooks {
+		webhooks = append(webhooks, hook{
+			bucket:   ratelimit.NewBucketWithQuantum(time.Minute, 20, 20),
+			endpoint: wh,
+			c:        client,
+		})
+	}
 }

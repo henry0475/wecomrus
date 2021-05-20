@@ -15,24 +15,22 @@ type WeComHook struct {
 	senders []Sender
 }
 
+// NewWeComHook for creating the hook
 func NewWeComHook(opts ...*options.Option) (*WeComHook, error) {
 	options.MergeOptions(opts...)
 	client := &http.Client{}
-	// Try to load
 	loadWebhooks(client)
 	if options.GetOptions().CorpID != "" && options.GetOptions().CorpSecret != "" {
 		loadGroupChat(client)
 	}
 
 	wch := &WeComHook{}
-
 	if len(webhooks) != 0 {
 		wch.senders = append(wch.senders, webhooks)
 	}
 	if options.GetOptions().GroupChatID != "" {
 		wch.senders = append(wch.senders, &groupChat)
 	}
-
 	return wch, nil
 }
 

@@ -11,22 +11,10 @@ import (
 	"github.com/henry0475/wecomrus/tokens"
 )
 
-type Sender interface {
-	Send(message string) error
-}
-
 type GroupChat struct {
 	t        tokens.Token
 	c        *http.Client
 	endpoint string
-}
-
-var groupChat GroupChat
-
-func loadGroupChat(client *http.Client) {
-	groupChat.t = tokens.NewAccessToken(options.GetOptions().CorpID, options.GetOptions().CorpSecret)
-	groupChat.c = client
-	groupChat.endpoint = "https://qyapi.weixin.qq.com/cgi-bin/appchat/send"
 }
 
 func (g *GroupChat) Send(message string) error {
@@ -76,4 +64,12 @@ func (g *GroupChat) Send(message string) error {
 	}
 
 	return fmt.Errorf("error code %d with message: %s", response.Errcode, response.Errmsg)
+}
+
+var groupChat GroupChat
+
+func loadGroupChat(client *http.Client) {
+	groupChat.t = tokens.NewAccessToken(options.GetOptions().CorpID, options.GetOptions().CorpSecret)
+	groupChat.c = client
+	groupChat.endpoint = "https://qyapi.weixin.qq.com/cgi-bin/appchat/send"
 }

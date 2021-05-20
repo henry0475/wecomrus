@@ -96,6 +96,12 @@ func Test_mergeOptions(t *testing.T) {
 			if options.Safe != tt.want.Safe {
 				t.Errorf("Safe has error, got: %v; want: %v", options.Safe, tt.want.Safe)
 			}
+			if options.MsgType != tt.want.MsgType {
+				t.Errorf("MsgType has error, got: %v; want: %v", options.Safe, tt.want.Safe)
+			}
+			if options.EnableStats != tt.want.EnableStats {
+				t.Errorf("EnableStats has error, got: %v; want: %v", options.Safe, tt.want.Safe)
+			}
 		})
 	}
 }
