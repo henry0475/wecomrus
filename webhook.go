@@ -91,7 +91,6 @@ func (h hooks) Send(message string) error {
 		}
 	} else {
 		// TODO: waiting
-
 	}
 
 	return nil

@@ -161,5 +161,26 @@ This is a text message.`
 }
 ```
 
+## Statistics
+If you enabled the `EnableStats` in the Option (default `True`), you can follow this part of code to get some data for analyzing including `storage.Counter.GetSentCount(date string, destID string)`, `storage.Counter.GetSentCount(date string, destID string)`, and `storage.Counter.GetStat(destID string)`.
+
+Here is an example for `storage.Counter.GetStat` use.
+```go
+import (
+    "github.com/henry0475/wecomrus/storage"
+	"github.com/henry0475/wecomrus/utils/hash"
+)
+
+// webhook is an URL you provided in the wecomrus.Option.WebHooks.
+func myFunc(webhook string) {
+    stat := storage.Counter.GetStat(
+		hash.GetDestID(webhook),
+	)
+    fmt.Printf("Successfully sent: %d", stat.Sent)
+    fmt.Printf("Failed to send: %d", stat.Unsent)
+    fmt.Printf("Duration: %d second", stat.Duration)
+}
+```
+
 ## License
 MIT

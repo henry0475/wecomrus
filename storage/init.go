@@ -1,6 +1,8 @@
 package storage
 
-import "time"
+import (
+	"time"
+)
 
 func init() {
 	data.data = make(map[string]interface{})
